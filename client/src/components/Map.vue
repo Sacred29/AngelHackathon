@@ -20,11 +20,35 @@
       <!-- Rendering the map on the page -->
       <div id="map" style="width: 80vw; height: 20rem"></div>
   
+      <!-- Tabs to switch between driving and transit modes -->
+      <div class="tabs">
+        <button
+          @click="setTravelMode('DRIVING')"
+          :class="{ active: travelMode === 'DRIVING' }"
+        >
+          Driving
+        </button>
+        <button
+          @click="setTravelMode('TRANSIT')"
+          :class="{ active: travelMode === 'TRANSIT' }"
+        >
+          Transit
+        </button>
+      </div>
+  
       <!-- Box to display route details -->
       <div class="route-details" v-if="routeDetails">
         <h3>Route Details</h3>
         <p>Distance: {{ routeDetails.distance }} meters</p>
         <p>Duration: {{ routeDetails.duration }}</p>
+        <div v-if="travelMode === 'TRANSIT' && routeDetails.steps">
+          <h4>Transit Steps</h4>
+          <ul>
+            <li v-for="(step, index) in routeDetails.steps" :key="index">
+              {{ step }}
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   </template>
@@ -54,6 +78,7 @@
       const endCoords = ref(null);
       const mapReady = ref(false);
       const routeDetails = ref(null); // Data property to store route details
+      const travelMode = ref("DRIVING"); // Data property to store travel mode
   
       const getUserLocation = () => {
         const isSupported = "navigator" in window && "geolocation" in navigator;
@@ -96,17 +121,23 @@
         }
   
         if (!mapReady.value) {
-          console.error("Map is not ready. DirectionsService or DirectionsRenderer is not initialized.");
+          console.error(
+            "Map is not ready. DirectionsService or DirectionsRenderer is not initialized."
+          );
           return;
         }
   
-        console.log("Calculating route between:", startCoords.value, endCoords.value);
+        console.log(
+          "Calculating route between:",
+          startCoords.value,
+          endCoords.value
+        );
   
         directionsService.value.route(
           {
             origin: startCoords.value,
             destination: endCoords.value,
-            travelMode: "DRIVING",
+            travelMode: travelMode.value,
           },
           (response, status) => {
             if (status === "OK") {
@@ -117,15 +148,35 @@
               const route = response.routes[0];
               const distance = route.legs[0].distance.value; // Distance in meters
               const duration = route.legs[0].duration.text; // Duration as text
+  
+              // Add transit steps if travel mode is transit
+              let steps = [];
+              if (travelMode.value === "TRANSIT") {
+                steps = route.legs[0].steps
+                  .filter((step) => step.travel_mode === "TRANSIT")
+                  .map((step) => {
+                    if (step.transit_details) {
+                      return `${step.transit_details.line.vehicle.name} from ${step.transit_details.departure_stop.name} to ${step.transit_details.arrival_stop.name} (${step.transit_details.line.short_name})`;
+                    }
+                    return `Walk from ${step.start_location.lat()}, ${step.start_location.lng()} to ${step.end_location.lat()}, ${step.end_location.lng()}`;
+                  });
+              }
+  
               routeDetails.value = {
                 distance,
                 duration,
+                steps,
               };
             } else {
               console.error("Directions request failed due to " + status);
             }
           }
         );
+      };
+  
+      const setTravelMode = (mode) => {
+        travelMode.value = mode;
+        calculateRoute(); // Recalculate route when travel mode changes
       };
   
       const openMarker = (id) => {
@@ -145,22 +196,28 @@
       // Load the Google Maps API and initialize the map
       onMounted(() => {
         const loader = new Loader({
-          apiKey: "AIzaSyDJHkiHhDBGTSd_AL1C5WCJXWYQaVgYV9M",
-          libraries: ["places"]
+          apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+          libraries: ["places"],
         });
   
-        loader.load().then(() => {
-          const mapOptions = {
-            center: coords.value,
-            zoom: 10,
-            mapTypeId: "terrain"
-          };
+        loader
+          .load()
+          .then(() => {
+            const mapOptions = {
+              center: coords.value,
+              zoom: 10,
+              mapTypeId: "terrain",
+            };
   
-          const mapInstance = new google.maps.Map(document.getElementById("map"), mapOptions);
-          onMapReady(mapInstance);
-        }).catch((e) => {
-          console.error("Error loading Google Maps API:", e);
-        });
+            const mapInstance = new google.maps.Map(
+              document.getElementById("map"),
+              mapOptions
+            );
+            onMapReady(mapInstance);
+          })
+          .catch((e) => {
+            console.error("Error loading Google Maps API:", e);
+          });
       });
   
       // Watch for changes in startCoords, endCoords, and mapReady
@@ -185,6 +242,8 @@
         onMapReady,
         calculateRoute,
         routeDetails, // Add routeDetails to the return object
+        travelMode, // Add travelMode to the return object
+        setTravelMode, // Add setTravelMode to the return object
       };
     },
   };
@@ -202,6 +261,22 @@
     font-size: 12px;
     font-weight: 500;
   }
+  .tabs {
+    margin-top: 10px;
+  }
+  .tabs button {
+    padding: 10px 20px;
+    margin-right: 5px;
+    cursor: pointer;
+    background-color: #f0f0f0;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+  }
+  .tabs button.active {
+    background-color: #4285f4;
+    color: white;
+  }
   .route-details {
     margin-top: 20px;
     padding: 10px;
@@ -210,3 +285,4 @@
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   }
   </style>
+  
