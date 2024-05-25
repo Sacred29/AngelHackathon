@@ -87,6 +87,7 @@ export default {
     const mapReady = ref(false);
     const routeDetails = ref(null); // Data property to store route details
     const travelMode = ref("DRIVING"); // Data property to store travel mode
+    const busStops = ref({}); // Store bus stop data
 
     const getUserLocation = () => {
       const isSupported = "navigator" in window && "geolocation" in navigator;
@@ -137,6 +138,32 @@ export default {
       });
     };
 
+    const fetchBusStops = async () => {
+      try {
+        const response = await fetch(
+          "https://data.busrouter.sg/v1/stops.min.json"
+        );
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        const data = await response.json();
+        busStops.value = data;
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    
+    const getBusStopNumber = (busStopName) => {
+      for (const stopNumber in busStops.value) {
+        const details = busStops.value[stopNumber];
+        if (details[2] === busStopName) {
+          return stopNumber;
+        }
+      }
+      return null;
+    };
+
+
     const calculateRoute = () => {
       if (!startCoords.value || !endCoords.value) {
         console.log("Start or end coordinates are not set.");
@@ -161,7 +188,7 @@ export default {
           origin: startCoords.value,
           destination: endCoords.value,
           travelMode: travelMode.value,
-          provideRouteAlternatives: true, // Add this line to compute alternative routes
+          provideRouteAlternatives: true,
         },
         async (response, status) => {
           if (status === "OK") {
@@ -176,28 +203,20 @@ export default {
             // Add transit steps if travel mode is transit
             let steps = await Promise.all(
               route.legs[0].steps.map(async (step) => {
-                if (step.travel_mode === "TRANSIT" && step.transit_details) {
-                  const departureAddress = await reverseGeocode(
-                    step.transit_details.departure_stop.location.lat(),
-                    step.transit_details.departure_stop.location.lng()
-                  );
-                  const arrivalAddress = await reverseGeocode(
-                    step.transit_details.arrival_stop.location.lat(),
-                    step.transit_details.arrival_stop.location.lng()
-                  );
-                  return `Bus number ${step.transit_details.line.short_name} from ${departureAddress} (Stop code: ${step.transit_details.departure_stop.stop_id}) to ${arrivalAddress} (Stop code: ${step.transit_details.arrival_stop.stop_id})`;
+                var instructionString;
+                if (step.travel_mode === "TRANSIT") {
+                  if (step.transit.line.vehicle.name === "Bus") {
+                    let busStopNumber = getBusStopNumber("Opp Parkway Parade");
+                    instructionString = `Take bus ${step.transit.line.name} from ${step.transit.departure_stop.name} (${busStopNumber}) to ${step.transit.arrival_stop.name} (${busStopNumber})`;
+                  } else if (["Tram", "Subway"].includes(step.transit.line.vehicle.name)) {
+                    instructionString = `Take train from ${step.transit.departure_stop.name} to ${step.transit.arrival_stop.name}`;
+                  } else {
+                    instructionString = step.instructions;
+                  }
                 } else if (step.travel_mode === "WALKING") {
-                  const startAddress = await reverseGeocode(
-                    step.start_location.lat(),
-                    step.start_location.lng()
-                  );
-                  const endAddress = await reverseGeocode(
-                    step.end_location.lat(),
-                    step.end_location.lng()
-                  );
-                  return `Walk from ${startAddress} to ${endAddress}`;
+                  instructionString = step.instructions;
                 }
-                return step.instructions;
+                return instructionString;
               })
             );
 
@@ -206,6 +225,7 @@ export default {
               duration,
               steps,
             };
+            console.log("Route details updated:", routeDetails.value);
           } else {
             console.error("Directions request failed due to " + status);
           }
@@ -215,7 +235,6 @@ export default {
 
     const setTravelMode = (mode) => {
       travelMode.value = mode;
-      // Removed calculateRoute call from here to trigger calculation only when the button is clicked
     };
 
     const openMarker = (id) => {
@@ -232,7 +251,6 @@ export default {
       console.log("Map is ready and directions service/renderer initialized.");
     };
 
-    // Load the Google Maps API and initialize the map
     onMounted(() => {
       const loader = new Loader({
         apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
@@ -253,6 +271,7 @@ export default {
             mapOptions
           );
           onMapReady(mapInstance);
+          fetchBusStops(); // Fetch bus stop data once the map is ready
         })
         .catch((e) => {
           console.error("Error loading Google Maps API:", e);
