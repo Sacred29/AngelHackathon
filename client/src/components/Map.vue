@@ -60,7 +60,7 @@
   export default {
     name: "Map",
     setup() {
-      const coords = ref({ lat: 51.5072, lng: 0.1276 }); // Default coordinates to London
+      const coords = ref({ lat: 1.290270, lng: 103.851959 }); // Default coordinates to London
       const markerDetails = ref({
         id: 1,
         position: coords.value,

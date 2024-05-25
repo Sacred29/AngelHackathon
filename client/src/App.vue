@@ -1,10 +1,12 @@
 <script>
 import Map from "./components/Map.vue";
+import FetchMRTDensity from "./components/FetchMRTDensity.vue";
 
 export default {
   name: "App",
   components: {
     Map,
+    FetchMRTDensity,
   },
 };
 </script>
@@ -18,7 +20,7 @@ export default {
   <div id="app">
     <Map />
   </div>
-
+<FetchMRTDensity />
   <main>
     <TheWelcome />
   </main>
