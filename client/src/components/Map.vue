@@ -19,6 +19,13 @@
   
       <!-- Rendering the map on the page -->
       <div id="map" style="width: 80vw; height: 20rem"></div>
+  
+      <!-- Box to display route details -->
+      <div class="route-details" v-if="routeDetails">
+        <h3>Route Details</h3>
+        <p>Distance: {{ routeDetails.distance }} meters</p>
+        <p>Duration: {{ routeDetails.duration }}</p>
+      </div>
     </div>
   </template>
   
@@ -46,6 +53,7 @@
       const startCoords = ref(null);
       const endCoords = ref(null);
       const mapReady = ref(false);
+      const routeDetails = ref(null); // Data property to store route details
   
       const getUserLocation = () => {
         const isSupported = "navigator" in window && "geolocation" in navigator;
@@ -104,6 +112,15 @@
             if (status === "OK") {
               directionsRenderer.value.setDirections(response);
               console.log("Route calculated successfully.");
+  
+              // Update route details
+              const route = response.routes[0];
+              const distance = route.legs[0].distance.value; // Distance in meters
+              const duration = route.legs[0].duration.text; // Duration as text
+              routeDetails.value = {
+                distance,
+                duration,
+              };
             } else {
               console.error("Directions request failed due to " + status);
             }
@@ -166,7 +183,8 @@
         updateEndPoint,
         map,
         onMapReady,
-        calculateRoute, // Add calculateRoute to return object
+        calculateRoute,
+        routeDetails, // Add routeDetails to the return object
       };
     },
   };
@@ -184,5 +202,11 @@
     font-size: 12px;
     font-weight: 500;
   }
+  .route-details {
+    margin-top: 20px;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #000000;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
   </style>
-  
