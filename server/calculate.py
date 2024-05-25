@@ -14,11 +14,13 @@ def process_fares(text):
     return None
 
 def get_fare(type, distance):
+    distance = distance / 1000
     df = pd.read_csv("../dataset/Fares_cleaned.csv")
     df = df[df['fare_type'] == fare_type[type]]
 
     # check max
     if distance >= float(df.iloc[-1]['distance']):
+        print(distance)
         return df.iloc[-1]['fare_per_ride']
     
     # iterate for fare range
@@ -38,5 +40,3 @@ df = pd.read_csv("../dataset/FaresforMRTandLRTEffectivefrom23December2023.csv")
 df = df[df['applicable_time'] == 'All other timings'].drop('applicable_time', axis=1)
 df['distance'] = df['distance'].apply(process_fares)
 df.to_csv("../dataset/Fares_cleaned.csv")
-    
-(get_fare(0, 10))
