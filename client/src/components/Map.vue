@@ -41,8 +41,8 @@
         <h3>Route Details</h3>
         <p>Distance: {{ routeDetails.distance }} meters</p>
         <p>Duration: {{ routeDetails.duration }}</p>
-        <div v-if="travelMode === 'TRANSIT' && routeDetails.steps">
-          <h4>Transit Steps</h4>
+        <div v-if="routeDetails.steps">
+          <h4>Route Steps</h4>
           <ul>
             <li v-for="(step, index) in routeDetails.steps" :key="index">
               {{ step }}
@@ -73,6 +73,7 @@
   
       const directionsService = ref(null);
       const directionsRenderer = ref(null);
+      const geocoder = ref(null);
       const map = ref(null);
       const startCoords = ref(null);
       const endCoords = ref(null);
@@ -114,6 +115,21 @@
         }
       };
   
+      const reverseGeocode = (lat, lng) => {
+        return new Promise((resolve, reject) => {
+          geocoder.value.geocode(
+            { location: { lat, lng } },
+            (results, status) => {
+              if (status === "OK" && results[0]) {
+                resolve(results[0].formatted_address);
+              } else {
+                reject(status);
+              }
+            }
+          );
+        });
+      };
+  
       const calculateRoute = () => {
         if (!startCoords.value || !endCoords.value) {
           console.log("Start or end coordinates are not set.");
@@ -139,7 +155,7 @@
             destination: endCoords.value,
             travelMode: travelMode.value,
           },
-          (response, status) => {
+          async (response, status) => {
             if (status === "OK") {
               directionsRenderer.value.setDirections(response);
               console.log("Route calculated successfully.");
@@ -150,17 +166,32 @@
               const duration = route.legs[0].duration.text; // Duration as text
   
               // Add transit steps if travel mode is transit
-              let steps = [];
-              if (travelMode.value === "TRANSIT") {
-                steps = route.legs[0].steps
-                  .filter((step) => step.travel_mode === "TRANSIT")
-                  .map((step) => {
-                    if (step.transit_details) {
-                      return `${step.transit_details.line.vehicle.name} from ${step.transit_details.departure_stop.name} to ${step.transit_details.arrival_stop.name} (${step.transit_details.line.short_name})`;
-                    }
-                    return `Walk from ${step.start_location.lat()}, ${step.start_location.lng()} to ${step.end_location.lat()}, ${step.end_location.lng()}`;
-                  });
-              }
+              let steps = await Promise.all(
+                route.legs[0].steps.map(async (step) => {
+                  if (step.travel_mode === "TRANSIT" && step.transit_details) {
+                    const departureAddress = await reverseGeocode(
+                      step.transit_details.departure_stop.location.lat(),
+                      step.transit_details.departure_stop.location.lng()
+                    );
+                    const arrivalAddress = await reverseGeocode(
+                      step.transit_details.arrival_stop.location.lat(),
+                      step.transit_details.arrival_stop.location.lng()
+                    );
+                    return `Bus number ${step.transit_details.line.short_name} from ${departureAddress} (Stop code: ${step.transit_details.departure_stop.stop_id}) to ${arrivalAddress} (Stop code: ${step.transit_details.arrival_stop.stop_id})`;
+                  } else if (step.travel_mode === "WALKING") {
+                    const startAddress = await reverseGeocode(
+                      step.start_location.lat(),
+                      step.start_location.lng()
+                    );
+                    const endAddress = await reverseGeocode(
+                      step.end_location.lat(),
+                      step.end_location.lng()
+                    );
+                    return `Walk from ${startAddress} to ${endAddress}`;
+                  }
+                  return step.instructions;
+                })
+              );
   
               routeDetails.value = {
                 distance,
@@ -187,6 +218,7 @@
         map.value = mapInstance;
         directionsService.value = new google.maps.DirectionsService();
         directionsRenderer.value = new google.maps.DirectionsRenderer();
+        geocoder.value = new google.maps.Geocoder();
         directionsRenderer.value.setMap(mapInstance);
         mapReady.value = true;
         console.log("Map is ready and directions service/renderer initialized.");
