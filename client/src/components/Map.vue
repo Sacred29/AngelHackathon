@@ -46,8 +46,9 @@
       <h3>Route Details</h3>
       <div v-for="(route, index) in routeDetails" :key="index">
         <p>Route {{ index + 1 }}</p>
-        <p>Distance: {{ route.distance }} meters</p>
+        <p>Distance: {{ route.distance / 1000 }}km</p>
         <p>Duration: {{ route.duration }}</p>
+        <p>Fare: ${{ route.fare / 100 }}</p>
         <div v-if="route.steps">
           <h4>Route Steps</h4>
           <ul>
@@ -66,6 +67,7 @@
 <script>
 import { ref, watch, onMounted } from "vue";
 import { Loader } from "@googlemaps/js-api-loader";
+import axios from "axios";
 
 export default {
   name: "Map",
@@ -207,6 +209,23 @@ export default {
               const distance = routes[i].legs[0].distance.value; // Distance in meters
               const duration = routes[i].legs[0].duration.text; // Duration as text
 
+              let fare; // Declare the fare variable
+if (distance != null) {
+await axios.get('http://127.0.0.1:5000/run-script', {
+    params: {
+        type: 0,
+        distance: distance
+    }
+})
+.then(response => {
+    fare = response.data.fare_per_ride; // Assign the fare value
+})
+.catch(error => {
+    console.error('Error fetching fare:', error);
+    this.error = error.response ? error.response.data.error : error.message;
+});
+}
+
               // Add transit steps if travel mode is transit
               let steps = await Promise.all(
                 routes[i].legs[0].steps.map(async (step) => {
@@ -230,6 +249,7 @@ export default {
                 distance,
                 duration,
                 steps,
+                fare
               });
               console.log(allRoutesDetails);
             };

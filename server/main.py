@@ -28,7 +28,7 @@ def get_fare():
         if fare_type_key not in fare_type or not distance:
             return jsonify({"error": "Invalid type or distance parameter"}), 400
         
-        distance = float(distance)
+        distance = float(distance) / 1000
 
         # Read the CSV file
         dataset_path = os.path.join(os.path.dirname(__file__), '../dataset/Fares_cleaned.csv')
