@@ -42,19 +42,22 @@
     </button>
 
     <!-- Box to display route details -->
-    <div class="route-details" v-if="routeDetails">
+    <div class="route-details" v-if="routeDetails && routeDetails.length">
       <h3>Route Details</h3>
-      <p>Distance: {{ routeDetails.distance }} meters</p>
-      <p>Duration: {{ routeDetails.duration }}</p>
-      <div v-if="routeDetails.steps">
-        <h4>Route Steps</h4>
-        <ul>
-          <li
-            v-for="(step, index) in routeDetails.steps"
-            :key="index"
-            v-html="step"
-          ></li>
-        </ul>
+      <div v-for="(route, index) in routeDetails" :key="index">
+        <p>Route {{ index + 1 }}</p>
+        <p>Distance: {{ route.distance }} meters</p>
+        <p>Duration: {{ route.duration }}</p>
+        <div v-if="route.steps">
+          <h4>Route Steps</h4>
+          <ul>
+            <li
+              v-for="(step, stepIndex) in route.steps"
+              :key="stepIndex"
+              v-html="step"
+            ></li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -196,35 +199,42 @@ export default {
             console.log("Route calculated successfully.");
 
             // Update route details
-            const route = response.routes[0];
-            const distance = route.legs[0].distance.value; // Distance in meters
-            const duration = route.legs[0].duration.text; // Duration as text
+            const routes = response.routes;
+            console.log(routes);
+            let allRoutesDetails = [];
 
-            // Add transit steps if travel mode is transit
-            let steps = await Promise.all(
-              route.legs[0].steps.map(async (step) => {
-                var instructionString;
-                if (step.travel_mode === "TRANSIT") {
-                  if (step.transit.line.vehicle.name === "Bus") {
-                    let busStopNumber = getBusStopNumber("Opp Parkway Parade");
-                    instructionString = `Take bus ${step.transit.line.name} from ${step.transit.departure_stop.name} (${busStopNumber}) to ${step.transit.arrival_stop.name} (${busStopNumber})`;
-                  } else if (["Tram", "Subway"].includes(step.transit.line.vehicle.name)) {
-                    instructionString = `Take train from ${step.transit.departure_stop.name} to ${step.transit.arrival_stop.name}`;
-                  } else {
+            for (let i = 0; i < response.routes.length; i++) {
+              const distance = routes[i].legs[0].distance.value; // Distance in meters
+              const duration = routes[i].legs[0].duration.text; // Duration as text
+
+              // Add transit steps if travel mode is transit
+              let steps = await Promise.all(
+                routes[i].legs[0].steps.map(async (step) => {
+                  var instructionString;
+                  if (step.travel_mode === "TRANSIT") {
+                    if (step.transit.line.vehicle.name === "Bus") {
+                      let busStopNumber = getBusStopNumber("Opp Parkway Parade");
+                      instructionString = `Take bus ${step.transit.line.name} from ${step.transit.departure_stop.name} (${busStopNumber}) to ${step.transit.arrival_stop.name} (${busStopNumber})`;
+                    } else if (["Tram", "Subway"].includes(step.transit.line.vehicle.name)) {
+                      instructionString = `Take train from ${step.transit.departure_stop.name} to ${step.transit.arrival_stop.name}`;
+                    } else {
+                      instructionString = step.instructions;
+                    }
+                  } else if (step.travel_mode === "WALKING") {
                     instructionString = step.instructions;
                   }
-                } else if (step.travel_mode === "WALKING") {
-                  instructionString = step.instructions;
-                }
-                return instructionString;
-              })
-            );
-
-            routeDetails.value = {
-              distance,
-              duration,
-              steps,
+                  return instructionString;
+                })
+              )
+              allRoutesDetails.push({
+                distance,
+                duration,
+                steps,
+              });
+              console.log(allRoutesDetails);
             };
+
+            routeDetails.value = allRoutesDetails;
             console.log("Route details updated:", routeDetails.value);
           } else {
             console.error("Directions request failed due to " + status);
