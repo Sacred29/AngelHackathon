@@ -36,6 +36,11 @@
         </button>
       </div>
   
+      <!-- Button to calculate route -->
+      <button @click="calculateRoute" class="calculate-route-button">
+        Calculate Route
+      </button>
+  
       <!-- Box to display route details -->
       <div class="route-details" v-if="routeDetails">
         <h3>Route Details</h3>
@@ -60,7 +65,7 @@
   export default {
     name: "Map",
     setup() {
-      const coords = ref({ lat: 1.290270, lng: 103.851959 }); // Default coordinates to London
+      const coords = ref({ lat: 1.290270, lng: 103.851959 }); // Default coordinates to Singapore
       const markerDetails = ref({
         id: 1,
         position: coords.value,
@@ -154,6 +159,7 @@
             origin: startCoords.value,
             destination: endCoords.value,
             travelMode: travelMode.value,
+            provideRouteAlternatives: true, // Add this line to compute alternative routes
           },
           async (response, status) => {
             if (status === "OK") {
@@ -207,7 +213,7 @@
   
       const setTravelMode = (mode) => {
         travelMode.value = mode;
-        calculateRoute(); // Recalculate route when travel mode changes
+        // Removed calculateRoute call from here to trigger calculation only when the button is clicked
       };
   
       const openMarker = (id) => {
@@ -222,7 +228,6 @@
         directionsRenderer.value.setMap(mapInstance);
         mapReady.value = true;
         console.log("Map is ready and directions service/renderer initialized.");
-        calculateRoute(); // Attempt to calculate route in case coordinates are already set
       };
   
       // Load the Google Maps API and initialize the map
@@ -250,13 +255,6 @@
           .catch((e) => {
             console.error("Error loading Google Maps API:", e);
           });
-      });
-  
-      // Watch for changes in startCoords, endCoords, and mapReady
-      watch([startCoords, endCoords, mapReady], () => {
-        if (mapReady.value && startCoords.value && endCoords.value) {
-          calculateRoute();
-        }
       });
   
       getUserLocation();
@@ -308,6 +306,16 @@
   .tabs button.active {
     background-color: #4285f4;
     color: white;
+  }
+  .calculate-route-button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    cursor: pointer;
+    background-color: #4285f4;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
   }
   .route-details {
     margin-top: 20px;
