@@ -1,20 +1,15 @@
 <template>
   <div>
+    <h1>Choose n' Go!</h1>  
     <!-- Input search boxes for Google Places Autocomplete -->
     <div class="search-box">
-      <GMapAutocomplete
-        placeholder="Start location"
-        @place_changed="updateStartPoint"
-        style="font-size: medium"
-      ></GMapAutocomplete>
+      <GMapAutocomplete placeholder="Start location" @place_changed="updateStartPoint" style="font-size: medium">
+      </GMapAutocomplete>
     </div>
 
     <div class="search-box">
-      <GMapAutocomplete
-        placeholder="End location"
-        @place_changed="updateEndPoint"
-        style="font-size: medium"
-      ></GMapAutocomplete>
+      <GMapAutocomplete placeholder="End location" @place_changed="updateEndPoint" style="font-size: medium">
+      </GMapAutocomplete>
     </div>
 
     <!-- Rendering the map on the page -->
@@ -22,16 +17,13 @@
 
     <!-- Tabs to switch between driving and transit modes -->
     <div class="tabs">
-      <button
+      <!-- <button
         @click="setTravelMode('DRIVING')"
         :class="{ active: travelMode === 'DRIVING' }"
       >
         Driving
-      </button>
-      <button
-        @click="setTravelMode('TRANSIT')"
-        :class="{ active: travelMode === 'TRANSIT' }"
-      >
+      </button> -->
+      <button @click="setTravelMode('TRANSIT')" :class="{ active: travelMode === 'TRANSIT' }">
         Transit
       </button>
     </div>
@@ -52,11 +44,7 @@
         <div v-if="route.steps">
           <h4>Route Steps</h4>
           <ul>
-            <li
-              v-for="(step, stepIndex) in route.steps"
-              :key="stepIndex"
-              v-html="step"
-            ></li>
+            <li v-for="(step, stepIndex) in route.steps" :key="stepIndex" v-html="step"></li>
           </ul>
         </div>
       </div>
@@ -91,7 +79,7 @@ export default {
     const endCoords = ref(null);
     const mapReady = ref(false);
     const routeDetails = ref(null); // Data property to store route details
-    const travelMode = ref("DRIVING"); // Data property to store travel mode
+    const travelMode = ref("TRANSIT"); // Data property to store travel mode
     const busStops = ref({}); // Store bus stop data
 
     const getUserLocation = () => {
@@ -157,7 +145,7 @@ export default {
         console.error("Error fetching data:", error);
       }
     };
-    
+
     const getBusStopNumber = (busStopName) => {
       for (const stopNumber in busStops.value) {
         const details = busStops.value[stopNumber];
@@ -193,7 +181,7 @@ export default {
           origin: startCoords.value,
           destination: endCoords.value,
           travelMode: travelMode.value,
-          provideRouteAlternatives: true,
+          provideRouteAlternatives: true
         },
         async (response, status) => {
           if (status === "OK") {
@@ -210,21 +198,21 @@ export default {
               const duration = routes[i].legs[0].duration.text; // Duration as text
 
               let fare; // Declare the fare variable
-if (distance != null) {
-await axios.get('http://127.0.0.1:5000/run-script', {
-    params: {
-        type: 0,
-        distance: distance
-    }
-})
-.then(response => {
-    fare = response.data.fare_per_ride; // Assign the fare value
-})
-.catch(error => {
-    console.error('Error fetching fare:', error);
-    this.error = error.response ? error.response.data.error : error.message;
-});
-}
+              if (distance != null) {
+                await axios.get('http://127.0.0.1:5000/run-script', {
+                  params: {
+                    type: 0,
+                    distance: distance
+                  }
+                })
+                  .then(response => {
+                    fare = response.data.fare_per_ride; // Assign the fare value
+                  })
+                  .catch(error => {
+                    console.error('Error fetching fare:', error);
+                    this.error = error.response ? error.response.data.error : error.message;
+                  });
+              }
 
               // Add transit steps if travel mode is transit
               let steps = await Promise.all(
@@ -232,8 +220,9 @@ await axios.get('http://127.0.0.1:5000/run-script', {
                   var instructionString;
                   if (step.travel_mode === "TRANSIT") {
                     if (step.transit.line.vehicle.name === "Bus") {
-                      let busStopNumber = getBusStopNumber("Opp Parkway Parade");
-                      instructionString = `Take bus ${step.transit.line.name} from ${step.transit.departure_stop.name} (${busStopNumber}) to ${step.transit.arrival_stop.name} (${busStopNumber})`;
+                      let busStopNumberDepart = getBusStopNumber(step.transit.departure_stop.name);
+                      let busStopNumberArrive = getBusStopNumber(step.transit.arrival_stop.name);
+                      instructionString = `Take bus ${step.transit.line.name} from ${step.transit.departure_stop.name} (${busStopNumberDepart}) to ${step.transit.arrival_stop.name} (${busStopNumberArrive})`;
                     } else if (["Tram", "Subway"].includes(step.transit.line.vehicle.name)) {
                       instructionString = `Take train from ${step.transit.departure_stop.name} to ${step.transit.arrival_stop.name}`;
                     } else {
@@ -331,20 +320,42 @@ await axios.get('http://127.0.0.1:5000/run-script', {
 </script>
 
 <style scoped>
+h1{
+  display: flex;
+  justify-content: center;
+  text-align: center;
+}
 .search-box {
-  margin: 10px 0px;
+  margin: 10px 0;
   padding: 10px;
   border-radius: 5px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  background-color: white;
+  display: flex;
+  flex-direction: column;
 }
-.location-details {
-  color: blue;
-  font-size: 12px;
-  font-weight: 500;
+
+.autocomplete-input {
+  width: 100%; 
+  padding: 10px; 
+  border: 1px solid #ccc; 
+  border-radius: 5px; 
+  font-size: 16px; 
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
 }
+
+#map {
+  width: 80vw;
+  height: 20rem;
+  margin: 10px 0;
+}
+
 .tabs {
   margin-top: 10px;
+  display: flex;
+  justify-content: center;
 }
+
 .tabs button {
   padding: 10px 20px;
   margin-right: 5px;
@@ -354,10 +365,12 @@ await axios.get('http://127.0.0.1:5000/run-script', {
   border-radius: 5px;
   font-size: 14px;
 }
+
 .tabs button.active {
   background-color: #4285f4;
   color: white;
 }
+
 .calculate-route-button {
   margin-top: 10px;
   padding: 10px 20px;
@@ -367,12 +380,24 @@ await axios.get('http://127.0.0.1:5000/run-script', {
   border: none;
   border-radius: 5px;
   font-size: 14px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
+
 .route-details {
   margin-top: 20px;
   padding: 10px;
   border-radius: 5px;
-  background-color: #000000;
+  background-color: #ffffff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.route-details h3 {
+  margin-top: 0;
+}
+
+.route-details div {
+  margin-bottom: 10px;
 }
 </style>

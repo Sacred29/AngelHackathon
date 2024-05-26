@@ -7,8 +7,7 @@ export default {
   name: "App",
   components: {
     Map,
-    FetchMRTDensity,
-    FetchCost,
+    // FetchCost
   },
 };
 </script>
@@ -16,22 +15,22 @@ export default {
 <template>
   <header>
     <div class="wrapper">
-      <HelloWorld msg="You did it!" />
     </div>
   </header>
-  <div id="app">
+  <div id="app" class="app-container">
     <Map />
+    <!-- <FetchCost /> -->
   </div>
-<FetchMRTDensity />
-<FetchCost />
+  <!-- <FetchMRTDensity /> -->
+
   <main>
-    <TheWelcome />
   </main>
 </template>
 
 <style scoped>
 header {
   line-height: 1.5;
+  text-align: center; /* Center align text */
 }
 
 .logo {
@@ -39,21 +38,33 @@ header {
   margin: 0 auto 2rem;
 }
 
+#app {
+  display: flex;
+  justify-content: center; /* Center align flex items horizontally */
+  align-items: center; /* Center align flex items vertically */
+}
+
+.wrapper {
+  max-width: 1200px;
+  margin: 0 auto; /* Center align wrapper horizontally */
+}
+</style>
+
+<style>
+/* Global styles */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f5f5f5;
+}
+
+.app-container {
+  padding-right: 2rem; /* Add padding on the right side */
+}
+
 @media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
+  .app-container {
+    padding-right: 2rem; /* Adjust padding for larger screens if needed */
   }
 }
 </style>
